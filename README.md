@@ -94,7 +94,7 @@ This project uses **Cloudflare D1**, a fast serverless SQL database running nati
 1. Go to the [Cloudflare Dashboard](https://dash.cloudflare.com/) ➔ **Storage & Databases** ➔ **D1 SQL Database**.
 2. Click **Create database**, name it `smart-canteen-db`.
 3. Click on your newly created database ➔ **Console**.
-4. Copy the contents of [`supabase/d1_schema.sql`](./supabase/d1_schema.sql), paste it into the console, and click **Execute**.
+4. Copy the contents of [`database/d1_schema.sql`](./database/d1_schema.sql), paste it into the console, and click **Execute**.
 5. Go to your Pages project ➔ **Settings** ➔ **Functions** ➔ **D1 database bindings**:
    * **Variable name:** `DB`
    * **D1 database:** `smart-canteen-db`
@@ -105,7 +105,7 @@ This project uses **Cloudflare D1**, a fast serverless SQL database running nati
 npx wrangler d1 create smart-canteen-db
 
 # 2. Execute the schema migration and seed data
-npx wrangler d1 execute smart-canteen-db --file=./supabase/d1_schema.sql
+npx wrangler d1 execute smart-canteen-db --file=./database/d1_schema.sql
 ```
 
 ---

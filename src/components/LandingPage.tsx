@@ -1,13 +1,58 @@
 import React from 'react';
 import { 
-  ChefHat, Utensils, ArrowRight, Shield, Award, Sparkles, LogIn
+  ChefHat, Utensils, ArrowRight, Shield, Award, Sparkles, LogIn, Receipt, Package
 } from 'lucide-react';
+import { UserRole } from '../types';
 
 interface LandingPageProps {
   onOpenAuth: () => void;
+  onSelectPortal?: (role: UserRole) => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onOpenAuth }) => {
+const DEMO_PORTALS = [
+  {
+    role: 'customer' as UserRole,
+    title: 'Customer Ordering',
+    desc: 'Browse categorized menu, add to cart with GST, checkout & track live status.',
+    icon: Utensils,
+    bg: 'bg-blue-50',
+    color: 'text-blue-600'
+  },
+  {
+    role: 'kitchen_staff' as UserRole,
+    title: 'Kitchen KDS',
+    desc: 'Live 3-column Kanban order display. Progress orders from Pending to Ready.',
+    icon: ChefHat,
+    bg: 'bg-amber-50',
+    color: 'text-amber-600'
+  },
+  {
+    role: 'cashier' as UserRole,
+    title: 'Cashier POS',
+    desc: 'Speedy counter checkout terminal, invoice generation & thermal receipt printing.',
+    icon: Receipt,
+    bg: 'bg-emerald-50',
+    color: 'text-emerald-600'
+  },
+  {
+    role: 'manager' as UserRole,
+    title: 'Canteen Manager',
+    desc: 'Track ingredient stock with low-stock warnings, menu card editor & suppliers.',
+    icon: Package,
+    bg: 'bg-purple-50',
+    color: 'text-purple-600'
+  },
+  {
+    role: 'super_admin' as UserRole,
+    title: 'Super Admin',
+    desc: 'Real-time sales & popularity charts, immutable audit trail & user role control.',
+    icon: Shield,
+    bg: 'bg-rose-50',
+    color: 'text-rose-600'
+  }
+];
+
+export const LandingPage: React.FC<LandingPageProps> = ({ onOpenAuth, onSelectPortal }) => {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between">
       
@@ -96,7 +141,43 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenAuth }) => {
         </div>
       </section>
 
-      {/* Features Section */}
+      {/* Instant Demo Role Portals Section */}
+      <section className="bg-slate-100/70 py-14 px-6 border-y border-slate-200/60">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="text-center max-w-xl mx-auto space-y-1.5">
+            <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Test Drive Every Persona</span>
+            <h2 className="text-2xl md:text-3xl font-black text-slate-900">Select Any Portal to Launch Instantly</h2>
+            <p className="text-xs text-slate-500">
+              Each portal is pre-loaded with live entries (active orders, recipes, inventory alerts, and receipts):
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {DEMO_PORTALS.map(p => (
+              <button
+                key={p.role}
+                onClick={() => onSelectPortal ? onSelectPortal(p.role) : onOpenAuth()}
+                className="bg-white p-5 rounded-2xl border border-slate-200/80 hover:border-indigo-500 hover:shadow-xl transition transform hover:-translate-y-1 text-left flex flex-col justify-between group space-y-4"
+              >
+                <div className="space-y-3">
+                  <div className={`p-2.5 rounded-xl w-fit ${p.bg}`}>
+                    <p.icon className={`h-5 w-5 ${p.color}`} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm group-hover:text-indigo-600 transition">{p.title}</h3>
+                    <p className="text-[11px] text-slate-500 line-clamp-3 mt-1 leading-relaxed">{p.desc}</p>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex items-center text-xs font-bold text-indigo-600 group-hover:translate-x-1 transition border-t border-slate-50">
+                  <span>Launch Portal</span>
+                  <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
       <section id="features" className="bg-white py-20 px-6 border-y border-slate-100">
         <div className="max-w-7xl w-full mx-auto space-y-12">
           <div className="text-center space-y-3 max-w-2xl mx-auto">
@@ -148,7 +229,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenAuth }) => {
       {/* Footer */}
       <footer className="bg-slate-900 text-slate-400 py-8 px-6 text-center text-xs border-t border-slate-800">
         <p>© 2026 Smart Canteen Management System. All rights reserved.</p>
-        <p className="mt-1 text-slate-500">Built for high-volume dining spaces with Supabase backend.</p>
+        <p className="mt-1 text-slate-500">Built for high-volume dining spaces powered by Cloudflare D1 Serverless SQL.</p>
       </footer>
 
     </div>

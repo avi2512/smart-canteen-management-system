@@ -26,7 +26,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   setUser: (user, profile) => set({ 
     user, 
     profile: profile || null,
-    currentRole: profile ? profile.role : 'customer'
+    currentRole: profile ? profile.role : (user?.user_metadata?.role || user?.role || 'customer')
   }),
   logout: () => set({ user: null, profile: null, currentRole: 'customer' })
 }));

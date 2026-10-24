@@ -164,6 +164,36 @@ INSERT INTO CMS_suppliers (id, supplier_name, contact_info) VALUES
 (2, 'Metro Wholesale Dairy', 'orders@metrodairy.com | +1 555-0144'),
 (3, 'RoastMasters Coffee Co', 'beans@roastmasters.com | +1 555-0178');
 
+-- Purchases
+INSERT INTO CMS_purchases (id, supplier_id, total_amount) VALUES
+(1, 1, 350.00),
+(2, 2, 120.00),
+(3, 3, 240.00);
+
+-- Orders for Live Testing (Kitchen KDS, Cashier POS, Customer & Admin)
+INSERT INTO CMS_orders (id, customer_id, order_number, status, total_amount, payment_status) VALUES
+(1, 'a87265c4-4b5c-443b-bd99-73894bfdf8d2', 'ORD-1001', 'completed', 13.98, 'paid'),
+(2, 'a87265c4-4b5c-443b-bd99-73894bfdf8d2', 'ORD-1002', 'ready', 9.99, 'paid'),
+(3, 'a87265c4-4b5c-443b-bd99-73894bfdf8d2', 'ORD-1003', 'preparing', 16.48, 'paid'),
+(4, 'a87265c4-4b5c-443b-bd99-73894bfdf8d2', 'ORD-1004', 'pending', 22.97, 'unpaid');
+
+-- Order Items
+INSERT INTO CMS_order_items (id, order_id, menu_item_id, quantity, price) VALUES
+(1, 1, 1, 1, 9.99),
+(2, 1, 5, 1, 3.99),
+(3, 2, 1, 1, 9.99),
+(4, 3, 3, 1, 7.99),
+(5, 3, 2, 1, 8.49),
+(6, 4, 1, 1, 9.99),
+(7, 4, 4, 2, 4.99),
+(8, 4, 7, 1, 2.99);
+
+-- Notifications
+INSERT INTO CMS_notifications (id, title, message, read_status) VALUES
+(1, 'Welcome to Smart Canteen', 'Explore our 5 role portals with pre-seeded data.', 0),
+(2, 'Low Stock Alert: Coffee Beans', 'Coffee Beans have dropped to 8 kg (Reorder level is 3 kg).', 0),
+(3, 'Order ORD-1002 Ready', 'Order ORD-1002 is ready for pickup at the counter.', 0);
+
 -- Audit Log Entry
 INSERT INTO CMS_audit_logs (action, entity) VALUES
 ('SYSTEM_INITIALIZATION', 'Cloudflare D1 Canteen Database initialized successfully');
