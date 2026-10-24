@@ -86,22 +86,31 @@ Open your browser and navigate to `http://localhost:5173`.
 
 ---
 
-## 🗄️ Database Setup (Supabase)
+## 🗄️ Database Setup (Cloudflare D1)
 
-If connecting to a live Supabase instance:
-1. Open your project on the [Supabase Dashboard](https://supabase.com/dashboard).
-2. Go to the **SQL Editor** tab.
-3. Open [`supabase/canteen_system_schema.sql`](./supabase/canteen_system_schema.sql) from this repository.
-4. Paste and run the entire script. It creates:
-   * All tables (`CMS_profiles`, `CMS_categories`, `CMS_menu_items`, `CMS_inventory`, `CMS_suppliers`, `CMS_purchases`, `CMS_orders`, `CMS_order_items`, `CMS_payments`, `CMS_notifications`, `CMS_audit_logs`).
-   * Row Level Security (RLS) policies for user, staff, and admin access.
-   * PostgreSQL triggers for inventory auto-deduction, low stock notifications, and menu audit trails.
+This project uses **Cloudflare D1**, a fast serverless SQL database running natively on Cloudflare's global edge network.
+
+### Option A: Using the Cloudflare Dashboard (GUI)
+1. Go to the [Cloudflare Dashboard](https://dash.cloudflare.com/) ➔ **Storage & Databases** ➔ **D1 SQL Database**.
+2. Click **Create database**, name it `smart-canteen-db`.
+3. Click on your newly created database ➔ **Console**.
+4. Copy the contents of [`supabase/d1_schema.sql`](./supabase/d1_schema.sql), paste it into the console, and click **Execute**.
+5. Go to your Pages project ➔ **Settings** ➔ **Functions** ➔ **D1 database bindings**:
+   * **Variable name:** `DB`
+   * **D1 database:** `smart-canteen-db`
+
+### Option B: Using Wrangler CLI
+```bash
+# 1. Create the D1 database
+npx wrangler d1 create smart-canteen-db
+
+# 2. Execute the schema migration and seed data
+npx wrangler d1 execute smart-canteen-db --file=./supabase/d1_schema.sql
+```
 
 ---
 
 ## 🌐 Deploying to Cloudflare Pages
-
-This project is pre-configured with `public/_redirects` for Cloudflare Pages single-page application routing.
 
 1. Go to the [Cloudflare Dashboard](https://dash.cloudflare.com/) ➔ **Workers & Pages** ➔ **Create** ➔ **Pages** ➔ **Connect to Git**.
 2. Select repository: `avi2512/smart-canteen-management-system`.
@@ -109,8 +118,7 @@ This project is pre-configured with `public/_redirects` for Cloudflare Pages sin
    * **Framework preset:** `Vite`
    * **Build command:** `npm run build`
    * **Build output directory:** `dist`
-4. Under **Environment variables**, optionally set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
-5. Click **Save and Deploy**.
+4. Click **Save and Deploy**. Cloudflare Pages will automatically compile the frontend and bind the serverless API functions in `/functions`.
 
 ---
 

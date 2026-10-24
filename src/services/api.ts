@@ -1,4 +1,3 @@
-import { supabase } from '../lib/supabase';
 import { 
   Category, MenuItem, InventoryItem, Supplier, 
   Purchase, Order, OrderItem, Payment, Notification, AuditLog
@@ -164,6 +163,16 @@ const checkMockLowStock = (item: InventoryItem) => {
   }
 };
 
+// Cloudflare D1 HTTP client
+const apiFetch = async <T>(path: string, options?: RequestInit): Promise<T> => {
+  const res = await fetch(`/api${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options
+  });
+  if (!res.ok) throw new Error(`API HTTP error: ${res.status}`);
+  return res.json();
+};
+
 // ==========================================
 // API SERVICE LAYER IMPLEMENTATION
 // ==========================================
@@ -172,9 +181,7 @@ export const apiService = {
   // 1. Categories
   async fetchCategories(): Promise<Category[]> {
     try {
-      const { data, error } = await supabase.from('CMS_categories').select('*').order('name');
-      if (error) throw error;
-      return data || [];
+      return await apiFetch<Category[]>('/categories');
     } catch {
       return getLocalData<Category[]>(MOCK_STORAGE_KEYS.CATEGORIES, []);
     }
@@ -182,9 +189,10 @@ export const apiService = {
 
   async createCategory(name: string, description?: string): Promise<Category> {
     try {
-      const { data, error } = await supabase.from('CMS_categories').insert({ name, description }).select().single();
-      if (error) throw error;
-      return data;
+      return await apiFetch<Category>('/categories', {
+        method: 'POST',
+        body: JSON.stringify({ name, description })
+      });
     } catch {
       const list = getLocalData<Category[]>(MOCK_STORAGE_KEYS.CATEGORIES, []);
       const newItem: Category = {
@@ -202,9 +210,7 @@ export const apiService = {
   // 2. Menu Items
   async fetchMenuItems(): Promise<MenuItem[]> {
     try {
-      const { data, error } = await supabase.from('CMS_menu_items').select('*').order('id');
-      if (error) throw error;
-      return data || [];
+      return await apiFetch<MenuItem[]>('/menu-items');
     } catch {
       return getLocalData<MenuItem[]>(MOCK_STORAGE_KEYS.MENU_ITEMS, []);
     }
@@ -212,9 +218,10 @@ export const apiService = {
 
   async createMenuItem(item: Omit<MenuItem, 'id' | 'created_at'>): Promise<MenuItem> {
     try {
-      const { data, error } = await supabase.from('CMS_menu_items').insert(item).select().single();
-      if (error) throw error;
-      return data;
+      return await apiFetch<MenuItem>('/menu-items', {
+        method: 'POST',
+        body: JSON.stringify(item)
+      });
     } catch {
       const list = getLocalData<MenuItem[]>(MOCK_STORAGE_KEYS.MENU_ITEMS, []);
       const newItem: MenuItem = {
@@ -230,9 +237,10 @@ export const apiService = {
 
   async updateMenuItem(id: number, updates: Partial<MenuItem>): Promise<MenuItem> {
     try {
-      const { data, error } = await supabase.from('CMS_menu_items').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return await apiFetch<MenuItem>(`/menu-items/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates)
+      });
     } catch {
       const list = getLocalData<MenuItem[]>(MOCK_STORAGE_KEYS.MENU_ITEMS, []);
       let updated: MenuItem | null = null;
@@ -252,9 +260,7 @@ export const apiService = {
   // 3. Inventory
   async fetchInventory(): Promise<InventoryItem[]> {
     try {
-      const { data, error } = await supabase.from('CMS_inventory').select('*').order('item_name');
-      if (error) throw error;
-      return data || [];
+      return await apiFetch<InventoryItem[]>('/inventory');
     } catch {
       return getLocalData<InventoryItem[]>(MOCK_STORAGE_KEYS.INVENTORY, []);
     }
@@ -262,9 +268,10 @@ export const apiService = {
 
   async updateInventoryStock(id: number, quantity: number): Promise<InventoryItem> {
     try {
-      const { data, error } = await supabase.from('CMS_inventory').update({ quantity, updated_at: new Date().toISOString() }).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return await apiFetch<InventoryItem>(`/inventory/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ quantity })
+      });
     } catch {
       const list = getLocalData<InventoryItem[]>(MOCK_STORAGE_KEYS.INVENTORY, []);
       let updated: InventoryItem | null = null;
@@ -285,22 +292,7 @@ export const apiService = {
   // 4. Orders
   async fetchOrders(): Promise<(Order & { items?: (OrderItem & { menu_item_name?: string })[] })[]> {
     try {
-      const { data: orders, error: ordersError } = await supabase.from('CMS_orders').select('*').order('id', { ascending: false });
-      if (ordersError) throw ordersError;
-      
-      const ordersWithItems = await Promise.all(orders.map(async (order) => {
-        const { data: items, error: itemsError } = await supabase.from('CMS_order_items').select('*, CMS_menu_items(name)').eq('order_id', order.id);
-        if (itemsError) return order;
-        
-        return {
-          ...order,
-          items: (items || []).map(item => ({
-            ...item,
-            menu_item_name: (item.CMS_menu_items as any)?.name
-          }))
-        };
-      }));
-      return ordersWithItems;
+      return await apiFetch<(Order & { items?: (OrderItem & { menu_item_name?: string })[] })[]>('/orders');
     } catch {
       const orders = getLocalData<Order[]>(MOCK_STORAGE_KEYS.ORDERS, []);
       const items = getLocalData<(OrderItem & { menu_item_name?: string })[]>(MOCK_STORAGE_KEYS.ORDER_ITEMS, []);
@@ -327,39 +319,15 @@ export const apiService = {
     const orderNumber = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
     
     try {
-      // 1. Create order
-      const { data: order, error: orderError } = await supabase.from('CMS_orders').insert({
-        customer_id: customerId,
-        order_number: orderNumber,
-        status: 'pending',
-        total_amount: totalAmount,
-        payment_status: paymentMethod ? 'paid' : 'unpaid'
-      }).select().single();
-
-      if (orderError) throw orderError;
-
-      // 2. Add items
-      const orderItems = items.map(item => ({
-        order_id: order.id,
-        menu_item_id: item.menu_item_id,
-        quantity: item.quantity,
-        price: item.price
-      }));
-      
-      const { error: itemsError } = await supabase.from('CMS_order_items').insert(orderItems);
-      if (itemsError) throw itemsError;
-
-      // 3. Add payment if processed
-      if (paymentMethod) {
-        await supabase.from('CMS_payments').insert({
-          order_id: order.id,
-          payment_method: paymentMethod,
-          amount: totalAmount,
-          transaction_reference: `TXN-${Math.floor(100000 + Math.random() * 900000)}`
-        });
-      }
-
-      return order;
+      return await apiFetch<Order>('/orders', {
+        method: 'POST',
+        body: JSON.stringify({
+          customerId,
+          totalAmount,
+          items,
+          paymentMethod
+        })
+      });
     } catch {
       // Local fallback
       const orders = getLocalData<Order[]>(MOCK_STORAGE_KEYS.ORDERS, []);
@@ -450,12 +418,10 @@ export const apiService = {
 
   async updateOrderStatus(id: number, status: Order['status'], paymentStatus?: Order['payment_status']): Promise<Order> {
     try {
-      const updates: Partial<Order> = { status };
-      if (paymentStatus) updates.payment_status = paymentStatus;
-
-      const { data, error } = await supabase.from('CMS_orders').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return await apiFetch<Order>(`/orders/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status, payment_status: paymentStatus })
+      });
     } catch {
       const orders = getLocalData<Order[]>(MOCK_STORAGE_KEYS.ORDERS, []);
       let updatedOrder: Order | null = null;
@@ -490,9 +456,7 @@ export const apiService = {
   // 5. Suppliers & Purchases
   async fetchSuppliers(): Promise<Supplier[]> {
     try {
-      const { data, error } = await supabase.from('CMS_suppliers').select('*').order('supplier_name');
-      if (error) throw error;
-      return data || [];
+      return await apiFetch<Supplier[]>('/suppliers');
     } catch {
       return getLocalData<Supplier[]>(MOCK_STORAGE_KEYS.SUPPLIERS, []);
     }
@@ -500,9 +464,10 @@ export const apiService = {
 
   async createSupplier(name: string, contactInfo: string): Promise<Supplier> {
     try {
-      const { data, error } = await supabase.from('CMS_suppliers').insert({ supplier_name: name, contact_info: contactInfo }).select().single();
-      if (error) throw error;
-      return data;
+      return await apiFetch<Supplier>('/suppliers', {
+        method: 'POST',
+        body: JSON.stringify({ supplier_name: name, contact_info: contactInfo })
+      });
     } catch {
       const list = getLocalData<Supplier[]>(MOCK_STORAGE_KEYS.SUPPLIERS, []);
       const newItem: Supplier = {
@@ -519,12 +484,7 @@ export const apiService = {
 
   async fetchPurchases(): Promise<(Purchase & { supplier_name?: string })[]> {
     try {
-      const { data, error } = await supabase.from('CMS_purchases').select('*, CMS_suppliers(supplier_name)').order('purchase_date', { ascending: false });
-      if (error) throw error;
-      return data.map(item => ({
-        ...item,
-        supplier_name: (item.CMS_suppliers as any)?.supplier_name
-      }));
+      return await apiFetch<(Purchase & { supplier_name?: string })[]>('/purchases');
     } catch {
       const purchases = getLocalData<Purchase[]>(MOCK_STORAGE_KEYS.PURCHASES, []);
       const suppliers = getLocalData<Supplier[]>(MOCK_STORAGE_KEYS.SUPPLIERS, []);
@@ -537,9 +497,10 @@ export const apiService = {
 
   async createPurchase(supplierId: number, totalAmount: number): Promise<Purchase> {
     try {
-      const { data, error } = await supabase.from('CMS_purchases').insert({ supplier_id: supplierId, total_amount: totalAmount }).select().single();
-      if (error) throw error;
-      return data;
+      return await apiFetch<Purchase>('/purchases', {
+        method: 'POST',
+        body: JSON.stringify({ supplier_id: supplierId, total_amount: totalAmount })
+      });
     } catch {
       const list = getLocalData<Purchase[]>(MOCK_STORAGE_KEYS.PURCHASES, []);
       const newItem: Purchase = {
@@ -557,9 +518,7 @@ export const apiService = {
   // 6. Notifications
   async fetchNotifications(): Promise<Notification[]> {
     try {
-      const { data, error } = await supabase.from('CMS_notifications').select('*').order('created_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
+      return await apiFetch<Notification[]>('/notifications');
     } catch {
       return getLocalData<Notification[]>(MOCK_STORAGE_KEYS.NOTIFICATIONS, []);
     }
@@ -567,8 +526,7 @@ export const apiService = {
 
   async markNotificationAsRead(id: number): Promise<void> {
     try {
-      const { error } = await supabase.from('CMS_notifications').update({ read_status: true }).eq('id', id);
-      if (error) throw error;
+      await apiFetch(`/notifications/${id}`, { method: 'PATCH' });
     } catch {
       const list = getLocalData<Notification[]>(MOCK_STORAGE_KEYS.NOTIFICATIONS, []);
       const updated = list.map(item => item.id === id ? { ...item, read_status: true } : item);
@@ -579,9 +537,7 @@ export const apiService = {
   // 7. Audit Logs
   async fetchAuditLogs(): Promise<AuditLog[]> {
     try {
-      const { data, error } = await supabase.from('CMS_audit_logs').select('*').order('timestamp', { ascending: false });
-      if (error) throw error;
-      return data || [];
+      return await apiFetch<AuditLog[]>('/audit-logs');
     } catch {
       return getLocalData<AuditLog[]>(MOCK_STORAGE_KEYS.AUDIT_LOGS, []);
     }
